@@ -1,5 +1,6 @@
 package com.stevenchennet.net;
 
+import org.apache.calcite.sql.validate.SqlAbstractConformance;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.configuration.ConfigConstants;
@@ -15,74 +16,49 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.descriptors.*;
+import org.apache.flink.table.sources.RowtimeAttributeDescriptor;
+import org.apache.flink.table.sources.tsextractors.ExistingField;
+import org.apache.flink.table.sources.wmstrategies.BoundedOutOfOrderTimestamps;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
+import scala.Option;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class FlinkApp {
-    public static void main(String[] args){
+    public static void main(String[] args) throws Exception {
         Configuration localConfig = new Configuration();
         localConfig.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(localConfig);
 
         StreamTableEnvironment ste = StreamTableEnvironment.create(env);
 
+        FunD(ste);
 
     }
 
-    private static void FunC(StreamTableEnvironment ste) throws Exception {
+    private static void FunD(StreamTableEnvironment ste) throws Exception {
         ste.registerFunction("AAA", new LogToRCF339DateTime());
-        Kafka kafka08 = new Kafka().version("0.8").topic("BDP-ChargingMinuteMetric").startFromEarliest().properties(getKafkaProperties());
-        Schema schema = new Schema()
-                .field("UptTimeMs", Types.LONG)
-                .field("BillID", Types.STRING)
-                .field("SOC", Types.DOUBLE)
-                .field("HighestVoltage", Types.DOUBLE);
 
-        FormatDescriptor formatDescriptor = new Json().failOnMissingField(false).deriveSchema();
-        ste.connect(kafka08).withFormat(formatDescriptor).withSchema(schema).inAppendMode().registerTableSource("SourceTable");
-        Table table = ste.sqlQuery("select * from SourceTable").addOrReplaceColumns("AAA(UptTimeMs) AS UptTimeMs");
-
-
-        table.printSchema();
-        //table.addOrReplaceColumns("AAA(UptTimeMs) AS X");
-
-
-        DataStream<Row> rowDataStream = ste.toAppendStream(table, Row.class);
-
-
-        rowDataStream.print();
-
-        ste.execute("ABC");
-    }
-
-    private static void FunB(StreamTableEnvironment ste) throws Exception {
-
-
-        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.SQL_TIMESTAMP, Types.STRING, Types.DOUBLE, Types.DOUBLE};
-        String[] fieldNamesA = new String[]{"UptTimeMs", "BillId", "SOC", "HighestVoltage"};
-        //TypeInformation<?>[] types = new TypeInformation<?>[]{Types.STRING, Types.DOUBLE, Types.DOUBLE};
-        //String[] fieldNamesA = new String[]{"BillId", "SOC", "HighestVoltage"};
-        TypeInformation<Row> typeInformation = Types.ROW_NAMED(fieldNamesA, typeInformations);
+        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.LONG, Types.STRING, Types.DOUBLE, Types.DOUBLE};
+        String[] fieldNamesA = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
+        TypeInformation<Row> rowTypeInformation = Types.ROW_NAMED(fieldNamesA, typeInformations);
         TableSchema tableSchemaA = new TableSchema(fieldNamesA, typeInformations);
 
 
         DataType[] dataTypes = new DataType[]{DataTypes.BIGINT(), DataTypes.STRING(), DataTypes.DOUBLE(), DataTypes.DOUBLE()};
-        String[] fieldNamesB = new String[]{"UptTimeMs", "BillId", "SOC", "HighestVoltage"};
+        String[] fieldNamesB = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
         TableSchema tableSchemaB = TableSchema.builder().fields(fieldNamesB, dataTypes).build();
 
-        JsonRowDeserializationSchema jsonRowDeserializationSchema = new JsonRowDeserializationSchema(tableSchemaA.toRowType());
 
         // 这个builder好奇怪~~
-        JsonRowDeserializationSchema jsonRowDeserializationSchemaB = new JsonRowDeserializationSchema.Builder(typeInformation).build();
+        JsonRowDeserializationSchema jsonRowDeserializationSchemaB = new JsonRowDeserializationSchema.Builder(rowTypeInformation).build();
+        //JsonRowDeserializationSchema jsonRowDeserializationSchemaA = new JsonRowDeserializationSchema(tableSchemaA.toRowType());
 
 
-        //RowtimeAttributeDescriptor rowtimeAttributeDescriptor = new RowtimeAttributeDescriptor("UptTimeMs", new ExistingField("UptTimeMs"), new BoundedOutOfOrderTimestamps(10));
+        RowtimeAttributeDescriptor rowtimeAttributeDescriptor = new RowtimeAttributeDescriptor("UptTimeMs", new ExistingField("UptTimeMs"), new BoundedOutOfOrderTimestamps(10));
+        List<RowtimeAttributeDescriptor> listDesc = Arrays.asList(rowtimeAttributeDescriptor);
 
         Kafka08TableSource tableSource = new Kafka08TableSource(
                 tableSchemaA,
@@ -91,13 +67,122 @@ public class FlinkApp {
                 Optional.empty(),
                 "BDP-ChargingMinuteMetric",
                 getKafkaProperties(),
-                jsonRowDeserializationSchema,
+                jsonRowDeserializationSchemaB,
+                StartupMode.EARLIEST,
+                Collections.emptyMap());
+
+        ste.registerTableSource("SourceTable", tableSource);
+        String sqlA = "SELECT * FROM SourceTable";
+        Table table = ste.sqlQuery(sqlA).addOrReplaceColumns("AAA(UptTimeMs) AS UptTimeMs");
+        table.printSchema();
+        Table targetTable = KafkaProtobufSchemaSource.assginTimestampToSchemaTable(table, Option.apply("UptTimeMs"), Option.apply(10L), ste);
+        targetTable.printSchema();
+        ste.registerTable("TargetTable", targetTable);
+
+        String sqlB = "SELECT * FROM TargetTable";
+        //String sqlB = "SELECT TUMBLE_START(UptTimeMs, INTERVAL '1' SECOND) as STARTXX, BillID, MAX(SOC) AS MaxSOC FROM TargetTable GROUP BY TUMBLE(UptTimeMs, INTERVAL '1' SECOND),BillID";
+
+        Table myTable = ste.sqlQuery(sqlB);
+        System.out.println("myTalbe...");
+        myTable.printSchema();
+
+
+        DataStream<Row> rowDataStream = ste.toAppendStream(table, Row.class);
+
+        rowDataStream.print();
+
+        ste.execute("ABC");
+
+    }
+
+    private static void FunC(StreamTableEnvironment ste) throws Exception {
+        ste.registerFunction("AAA", new LogToRCF339DateTime());
+
+        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.LONG, Types.STRING, Types.DOUBLE, Types.DOUBLE};
+        String[] fieldNamesA = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
+        TypeInformation<Row> rowTypeInformation = Types.ROW_NAMED(fieldNamesA, typeInformations);
+        TableSchema tableSchemaA = new TableSchema(fieldNamesA, typeInformations);
+
+
+        DataType[] dataTypes = new DataType[]{DataTypes.BIGINT(), DataTypes.STRING(), DataTypes.DOUBLE(), DataTypes.DOUBLE()};
+        String[] fieldNamesB = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
+        TableSchema tableSchemaB = TableSchema.builder().fields(fieldNamesB, dataTypes).build();
+
+
+        // 这个builder好奇怪~~
+        JsonRowDeserializationSchema jsonRowDeserializationSchemaB = new JsonRowDeserializationSchema.Builder(rowTypeInformation).build();
+        //JsonRowDeserializationSchema jsonRowDeserializationSchemaA = new JsonRowDeserializationSchema(tableSchemaA.toRowType());
+
+
+        RowtimeAttributeDescriptor rowtimeAttributeDescriptor = new RowtimeAttributeDescriptor("UptTimeMs", new ExistingField("UptTimeMs"), new BoundedOutOfOrderTimestamps(10));
+        List<RowtimeAttributeDescriptor> listDesc = Arrays.asList(rowtimeAttributeDescriptor);
+
+        Kafka08TableSource tableSource = new Kafka08TableSource(
+                tableSchemaA,
+                Optional.empty(),
+                Arrays.asList(),
+                Optional.empty(),
+                "BDP-ChargingMinuteMetric",
+                getKafkaProperties(),
+                jsonRowDeserializationSchemaB,
+                StartupMode.EARLIEST,
+                Collections.emptyMap());
+
+        ste.registerTableSource("SourceTable", tableSource);
+        String sqlA = "SELECT * FROM SourceTable";
+        Table table = ste.sqlQuery(sqlA).addOrReplaceColumns("AAA(UptTimeMs) AS UptTimeMs");
+        table.printSchema();
+        Table targetTable = KafkaProtobufSchemaSource.assginTimestampToSchemaTable(table, Option.apply("UptTimeMs"), Option.apply(10L), ste);
+        targetTable.printSchema();
+        ste.registerTable("TargetTable", targetTable);
+
+        String sqlB = "SELECT TUMBLE_END(UptTimeMs, INTERVAL '1' SECOND) as START, BillId, MAX(SOC) AS MaxSOC FROM TargetTable GROUP BY TUMBLE(UptTimeMs, INTERVAL '1' SECOND),BillId";
+
+
+        DataStream<Row> rowDataStream = ste.toAppendStream(table, Row.class);
+        rowDataStream.print();
+
+        ste.execute("ABC");
+
+    }
+
+    private static void FunB(StreamTableEnvironment ste) throws Exception {
+        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.LONG, Types.STRING, Types.DOUBLE, Types.DOUBLE};
+        String[] fieldNamesA = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
+        TypeInformation<Row> rowTypeInformation = Types.ROW_NAMED(fieldNamesA, typeInformations);
+        TableSchema tableSchemaA = new TableSchema(fieldNamesA, typeInformations);
+
+
+        DataType[] dataTypes = new DataType[]{DataTypes.BIGINT(), DataTypes.STRING(), DataTypes.DOUBLE(), DataTypes.DOUBLE()};
+        String[] fieldNamesB = new String[]{"UptTimeMs", "BillID", "SOC", "HighestVoltage"};
+        TableSchema tableSchemaB = TableSchema.builder().fields(fieldNamesB, dataTypes).build();
+
+
+        // 这个builder好奇怪~~
+        JsonRowDeserializationSchema jsonRowDeserializationSchemaB = new JsonRowDeserializationSchema.Builder(rowTypeInformation).build();
+        //JsonRowDeserializationSchema jsonRowDeserializationSchemaA = new JsonRowDeserializationSchema(tableSchemaA.toRowType());
+
+
+        RowtimeAttributeDescriptor rowtimeAttributeDescriptor = new RowtimeAttributeDescriptor("UptTimeMs", new ExistingField("UptTimeMs"), new BoundedOutOfOrderTimestamps(10));
+        List<RowtimeAttributeDescriptor> listDesc = Arrays.asList(rowtimeAttributeDescriptor);
+
+        Kafka08TableSource tableSource = new Kafka08TableSource(
+                tableSchemaA,
+                Optional.empty(),
+                Arrays.asList(),
+                Optional.empty(),
+                "BDP-ChargingMinuteMetric",
+                getKafkaProperties(),
+                jsonRowDeserializationSchemaB,
                 StartupMode.EARLIEST,
                 Collections.emptyMap());
 
         ste.registerTableSource("SourceTable", tableSource);
         //Table table = ste.sqlQuery("SELECT FROM_UNIXTIME(UptTimeMs) FROM SourceTable");
-        Table table = ste.sqlQuery("SELECT * FROM SourceTable");
+        String sqlA = "SELECT * FROM SourceTable";
+        Table table = ste.sqlQuery(sqlA);
+        table.printSchema();
+
 
         DataStream<Row> rowDataStream = ste.toAppendStream(table, Row.class);
         rowDataStream.print();
@@ -111,14 +196,12 @@ public class FlinkApp {
                 .version("0.8")
                 .topic("BDP-ChargingMinuteMetric")
                 .startFromEarliest()
-                .property("zookeeper.connect", "hdpjntest.chinacloudapp.cn:2182/kafka08")
-                .property("bootstrap.servers", "telddruidteal.chinacloudapp.cn:9095")
-                .property("group.id", "abc");
+                .properties(getKafkaProperties());
 
 
         Schema schema = new Schema()
-                .field("UptTimeMs", Types.SQL_TIMESTAMP)
-                .rowtime(new Rowtime().timestampsFromField("UptTimeMs").watermarksPeriodicBounded(1000))
+                .field("UptTimeMs", Types.LONG)
+                //.rowtime(new Rowtime().timestampsFromField("UptTimeMs").watermarksPeriodicBounded(1000))
                 .field("BillID", Types.STRING)
                 .field("SOC", Types.DOUBLE)
                 .field("HighestVoltage", Types.DOUBLE);
@@ -127,10 +210,8 @@ public class FlinkApp {
         //.rowtime(new Rowtime().timestampsFromField("UptTimeMs").watermarksPeriodicBounded(1000))
 
 
-        TypeInformation<?>[] types = new TypeInformation<?>[]{Types.SQL_TIMESTAMP, Types.STRING, Types.DOUBLE, Types.DOUBLE};
+        TypeInformation<?>[] types = new TypeInformation<?>[]{Types.LONG, Types.STRING, Types.DOUBLE, Types.DOUBLE};
         String[] fieldNames = new String[]{"UptTimeMs", "BillId", "SOC", "HighestVoltage"};
-        //TypeInformation<?>[] types = new TypeInformation<?>[]{Types.STRING, Types.DOUBLE, Types.DOUBLE};
-        //String[] fieldNames = new String[]{"BillId", "SOC", "HighestVoltage"};
         TypeInformation<Row> typeInformation = Types.ROW_NAMED(fieldNames, types);
 
         //FormatDescriptor formatDescriptor = new Json().failOnMissingField(false).schema(typeInformation).deriveSchema();
@@ -151,7 +232,7 @@ public class FlinkApp {
         Properties properties = new Properties();
         properties.setProperty("zookeeper.connect", "hdpjntest.chinacloudapp.cn:2182/kafka08");
         properties.setProperty("bootstrap.servers", "telddruidteal.chinacloudapp.cn:9095");
-        properties.setProperty("group.id", "abc");
+        properties.setProperty("group.id", "abcd");
         return properties;
     }
 }

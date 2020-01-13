@@ -117,3 +117,5 @@ fabric.properties
 flink-tutorial.iml
 src/main/resources/
 src/test/
+.idea/sbt.xml
+.idea/modules.xml

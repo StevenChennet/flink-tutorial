@@ -34,6 +34,6 @@ public class FlinkApp {
                 .Builder(tableSchema.toRowType())
                 .build();
 
-        Kafka08TableSource source = new Kafka08TableSource()
+        //Kafka08TableSource source = new Kafka08TableSource()
     }
 }

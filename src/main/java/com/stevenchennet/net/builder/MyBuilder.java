@@ -7,13 +7,16 @@ import java.util.function.Supplier;
 
 public class MyBuilder<T> {
     private final Supplier<T> instantiator;
+
     private List<Consumer<T>> modifiers = new ArrayList<>();
     public MyBuilder(Supplier<T> instantiator) {
         this.instantiator = instantiator;
     }
+
     public static <T> MyBuilder<T> of(Supplier<T> instantiator) {
         return new MyBuilder<>(instantiator);
     }
+
     public <P1> MyBuilder<T> with(Consumer1<T, P1> consumer, P1 p1) {
         Consumer<T> c = instance -> consumer.accept(instance, p1);
         modifiers.add(c);

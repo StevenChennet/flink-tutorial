@@ -11,24 +11,29 @@ import org.apache.flink.table.api.java.StreamTableEnvironment;
 
 import java.util.Properties;
 
-public class WriteExampleToKafka {
-    public static void main(String[] args) throws Exception{
+public class WriteExampleToKafkaLong {
+    public static void main(String[] args) throws Exception {
         Configuration localConfig = new Configuration();
         localConfig.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(localConfig).setParallelism(1);
         StreamTableEnvironment ste = StreamTableEnvironment.create(env);
 
         DataStreamSource<MyExample> source = env.fromElements(
-                new MyExample("2019-03-18T10:01:37Z", "zhangsan", 10, 2L),
-                new MyExample("2019-03-18T10:02:37Z", "zhangsan", 10, 2L),
-                new MyExample("2019-03-18T10:11:37Z", "zhangsan", 10, 2L),
-                new MyExample("2019-03-18T10:21:37Z", "zhangsan", 10, 2L),
-                new MyExample("2019-03-18T10:32:37Z", "zhangsan", 10, 2L)
+                // 2019-03-18T10:01:37Z
+                new MyExample(1552874497000L, "2019-03-18T10:01:37Z", "zhangsan", 10, 2L),
+                // 2019-03-18T10:02:37Z
+                new MyExample(1552874557000L, "2019-03-18T10:02:37Z", "zhangsan", 10, 2L),
+                // 2019-03-18T10:11:37Z
+                new MyExample(1552875097000L, "2019-03-18T10:11:37Z", "zhangsan", 10, 2L),
+                // 2019-03-18T10:21:37Z
+                new MyExample(1552875697000L, "2019-03-18T10:21:37Z", "zhangsan", 10, 2L),
+                // 2019-03-18T10:32:37Z
+                new MyExample(1552876357000L, "2019-03-18T10:32:37Z", "zhangsan", 10, 2L)
         );
 
-        FlinkKafkaProducer08<String> sink = new FlinkKafkaProducer08<>("Flink191TestA", new SimpleStringSchema(),getKafkaProperties());
+        FlinkKafkaProducer08<String> sink = new FlinkKafkaProducer08<>("Flink191TestC", new SimpleStringSchema(), getKafkaProperties());
 
-        source.map(t->t.toJson()).addSink(sink);
+        source.map(t -> t.toJson()).addSink(sink);
 
         env.execute("ABC");
     }
@@ -41,23 +46,26 @@ public class WriteExampleToKafka {
         return properties;
     }
 
-    static class MyExample{
-        public MyExample(String uptTime, String name, int hight, long ab){
+    static class MyExample {
+        public MyExample(Long uptTime, String uptTimeStr, String name, int hight, long ab) {
             this.UptTime = uptTime;
+            this.UptTimeStr = uptTimeStr;
             this.Name = name;
             this.Hight = hight;
             this.AB = ab;
         }
-        public MyExample(){
+
+        public MyExample() {
 
         }
 
-        public String UptTime;
+        public Long UptTime;
+        public String UptTimeStr;
         public String Name;
         public int Hight;
         public long AB;
 
-        public String toJson() throws Exception{
+        public String toJson() throws Exception {
             ObjectMapper mapper = new ObjectMapper();
             String json = mapper.writeValueAsString(this);
             return json;

@@ -1,5 +1,6 @@
 package com.stevenchennet.net;
 
+import jdk.nashorn.internal.codegen.types.Type;
 import org.apache.calcite.sql.validate.SqlAbstractConformance;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -9,6 +10,8 @@ import org.apache.flink.formats.json.JsonRowDeserializationSchema;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.Kafka08TableSource;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.table.api.DataTypes;
@@ -21,11 +24,9 @@ import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.BoundedOutOfOrderTimestamps;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
-import scala.Long;
 import scala.Option;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 public class FlinkApp {
     public static void main(String[] args) throws Exception {
@@ -41,9 +42,10 @@ public class FlinkApp {
 
     private static void FunG(StreamTableEnvironment ste) throws Exception {
         ste.registerFunction("AAA", new LogToRCF339DateTime());
+        ste.registerFunction("LongToTs", new LongToTimestamp());
 
-        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.SQL_TIMESTAMP, Types.STRING, Types.INT, Types.LONG};
-        String[] fieldNamesA = new String[]{"UptTime", "Name", "Hight", "AB"};
+        TypeInformation<?>[] typeInformations = new TypeInformation<?>[]{Types.LONG, Types.STRING, Types.STRING, Types.INT, Types.LONG};
+        String[] fieldNamesA = new String[]{"UptTime", "UptTimeStr", "Name", "Hight", "AB"};
         TypeInformation<Row> rowTypeInformation = Types.ROW_NAMED(fieldNamesA, typeInformations);
         TableSchema tableSchemaA = new TableSchema(fieldNamesA, typeInformations);
 
@@ -61,7 +63,7 @@ public class FlinkApp {
                 Optional.empty(),
                 Arrays.asList(),
                 Optional.empty(),
-                "Flink191TestA",
+                "Flink191TestC",
                 getKafkaProperties(),
                 jsonRowDeserializationSchemaB,
                 StartupMode.EARLIEST,
@@ -69,19 +71,41 @@ public class FlinkApp {
 
         ste.registerTableSource("SourceTable", tableSource);
         String sqlA = "SELECT * FROM SourceTable";
-        String sqlB = "SELECT TUMBLE_START(UptTime, INTERVAL '10' SECOND) as STARTXX, Name, MAX(Hight) AS MAXHight FROM SourceTable GROUP BY TUMBLE(UptTime, INTERVAL '10' SECOND),Name";
-        Table table = ste.sqlQuery(sqlA);
-        table.printSchema();
+        Table tableA = ste.sqlQuery(sqlA);
+        ste.registerTable("TableA", tableA);
+        tableA.printSchema();
+
+        String sqlB = "SELECT UptTime,UptTimeStr,Name,Hight,AB FROM TableA";
+        //String sqlB = "SELECT LongToTs(UptTime) AS UptTime,UptTimeStr,Name,Hight,AB FROM TableA";
+        Table tableB = ste.sqlQuery(sqlB);
+        tableB.printSchema();
+
+        DataStream<Row> rowDataStream = ste.toAppendStream(tableB, Row.class);
+        BoundedOutOfOrdernessTimestampExtractor<Row> te = new BoundedOutOfOrdernessTimestampExtractor<Row>(Time.seconds(0L)) {
+            @Override
+            public long extractTimestamp(Row row) {
+                String teStr = row.getField(0).toString();
+                Long ts = Long.parseLong(teStr);
+                return ts;
+            }
+        };
+        DataStream<Row> watermarksDataStream = rowDataStream.assignTimestampsAndWatermarks(te);
 
 
-        DataStream<Row> rowDataStream = ste.toAppendStream(table, Row.class);
 
-        rowDataStream.print();
+
+        watermarksDataStream.print();
 
         ste.execute("ABC");
 
     }
 
+    /**
+     * 验证 {"UptTime":"2019-03-18T10:01:37Z","Name":"zhangsan","Hight":10,"AB":2} 格式的Json可以运行
+     *
+     * @param ste
+     * @throws Exception
+     */
     private static void FunE(StreamTableEnvironment ste) throws Exception {
         ste.registerFunction("AAA", new LogToRCF339DateTime());
 

@@ -18,11 +18,19 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
         <log4j.version>1.2.14</log4j.version>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <lombok.version>1.18.6</lombok.version>
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.lettuce</groupId>

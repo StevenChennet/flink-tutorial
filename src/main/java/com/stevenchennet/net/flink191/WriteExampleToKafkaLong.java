@@ -1,4 +1,4 @@
-package com.stevenchennet.net;
+package com.stevenchennet.net.flink191;
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.configuration.ConfigConstants;

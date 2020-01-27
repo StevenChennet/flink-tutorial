@@ -1,4 +1,4 @@
-package com.stevenchennet.net.redising;
+package com.stevenchennet.net.flink191.redising;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisFuture;

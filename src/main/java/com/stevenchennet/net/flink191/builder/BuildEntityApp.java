@@ -1,4 +1,4 @@
-package com.stevenchennet.net.builder;
+package com.stevenchennet.net.flink191.builder;
 
 public class BuildEntityApp {
     static void Test() {

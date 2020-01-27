@@ -1,12 +1,4 @@
-package com.stevenchennet.net
-
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
-import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.table.api.java.StreamTableEnvironment
-import org.apache.flink.table.api.{Table, TableSchema, Types}
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
-import org.apache.flink.types.Row
+package com.stevenchennet.net.flink191;
 
 object KafkaProtobufSchemaSource {
   /**

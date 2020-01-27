@@ -1,4 +1,4 @@
-package com.stevenchennet.net;
+package com.stevenchennet.net.flink191;
 
 import java.util.Properties;
 

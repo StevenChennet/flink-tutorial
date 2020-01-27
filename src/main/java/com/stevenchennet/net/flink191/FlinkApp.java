@@ -1,7 +1,5 @@
-package com.stevenchennet.net;
+package com.stevenchennet.net.flink191;
 
-import jdk.nashorn.internal.codegen.types.Type;
-import org.apache.calcite.sql.validate.SqlAbstractConformance;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.configuration.ConfigConstants;

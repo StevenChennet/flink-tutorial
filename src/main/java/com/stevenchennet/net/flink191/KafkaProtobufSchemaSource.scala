@@ -1,4 +1,12 @@
-package com.stevenchennet.net.flink191;
+package com.stevenchennet.net.flink191
+
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
+import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.table.api.{Table,Types}
+import org.apache.flink.table.api.java.StreamTableEnvironment
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
+import org.apache.flink.types.Row
 
 object KafkaProtobufSchemaSource {
   /**
@@ -23,8 +31,10 @@ object KafkaProtobufSchemaSource {
       originTable.getSchema.getFieldTypes.copyToArray(targetTableTypeInformations)
       targetTableTypeInformations(timeColumnIndex) = TimeIndicatorTypeInfo.ROWTIME_INDICATOR
 
+      import collection.JavaConverters._
 
       val rowTypeInfo = Types.ROW(originTable.getSchema.getFieldNames, targetTableTypeInformations)
+      //val rowTypeInfo = Types.ROW(targetTableTypeInformations， originTable.getSchema.getFieldNames)
       val typeTargetStream = targetStream.returns(rowTypeInfo)
       val targetTable = ste.fromDataStream(typeTargetStream)
       println("----assginTimestampToSchemaTable----targetTable----")

@@ -79,8 +79,30 @@ public class KeyProcessApp {
 
 
 
+    }
 
 
+    static class MyTrigger extends Trigger<Bms, TimeWindow>{
+
+        @Override
+        public TriggerResult onElement(Bms element, long timestamp, TimeWindow window, TriggerContext ctx) throws Exception {
+            return null;
+        }
+
+        @Override
+        public TriggerResult onProcessingTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
+            return null;
+        }
+
+        @Override
+        public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
+            return null;
+        }
+
+        @Override
+        public void clear(TimeWindow window, TriggerContext ctx) throws Exception {
+
+        }
     }
 
 

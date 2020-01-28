@@ -11,6 +11,6 @@ public class Bms {
     private long uptTime;
     private double soc;
     private double tMax;
-    private double tMin;
+    private String tMaxCode;
     private double kwhMeter;
 }

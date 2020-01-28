@@ -23,11 +23,16 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.util.Collector;
+import teld.kafka.common.Metric;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-public class KeyProcessApp {
-    public static void main(String[] args) {
+public class AppProcess {
+    public static void main(String[] args) throws Exception {
         Configuration localConfig = new Configuration();
         localConfig.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(localConfig).setParallelism(1);
@@ -46,64 +51,37 @@ public class KeyProcessApp {
         KeyedStream<Bms, String> keyedBmsStream = bmsSourceStream.keyBy(bms -> bms.getId());
         //WindowAssigner<Object, TimeWindow> bmsWindowAssigner = TumblingEventTimeWindows.of(Time.seconds(10L), Time.seconds(0L));
 
-        WindowedStream<Bms,String, TimeWindow> timeWindowedBmsStream =  keyedBmsStream.window(TumblingEventTimeWindows.of(Time.seconds(10L), Time.seconds(0L)));
+        //WindowedStream<Bms, String, TimeWindow> timeWindowedBmsStream = keyedBmsStream.window(TumblingEventTimeWindows.of(Time.seconds(60L), Time.seconds(0L)));
+        WindowedStream<Bms, String, TimeWindow> timeWindowedBmsStream = keyedBmsStream.window(TumblingEventTimeWindows.of(Time.seconds(60L)));
 
-        WindowedStream<Bms,String, TimeWindow> triggerTimeWindowedBmsStream = timeWindowedBmsStream.trigger(new Trigger<Bms, TimeWindow>() {
+        //WindowedStream<Bms, String, TimeWindow> triggerTimeWindowedBmsStream = timeWindowedBmsStream.trigger(new MyTrigger());
+
+        SingleOutputStreamOperator<MinuteMetric> bmsStream = timeWindowedBmsStream.process(new ProcessWindowFunction<Bms, MinuteMetric, String, TimeWindow>() {
             @Override
-            public TriggerResult onElement(Bms bms, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                return null;
-            }
+            public void process(String s, Context context, Iterable<Bms> iterable, Collector<MinuteMetric> collector) throws Exception {
+                List<Bms> bmsList = StreamSupport.stream(iterable.spliterator(), false).collect(Collectors.toList());
+                MinuteMetric minuteMetric = new MinuteMetric();
 
-            @Override
-            public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                return null;
-            }
+                minuteMetric.setId(s);
 
-            @Override
-            public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                return null;
-            }
+                TimeWindow window = context.window();
+                long windowStart = window.getStart();
+                long windowEnd = window.getEnd();
+                long maxTimestamp = window.maxTimestamp();
+                long waterMark = context.currentWatermark();
 
-            @Override
-            public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+                minuteMetric.setUptTimeStart(windowStart);
+                minuteMetric.setUptTimeEnd(windowEnd);
+                double maxSoc = bmsList.stream().map(Bms::getSoc).max(Double::compareTo).get();
+                minuteMetric.setMaxSoc(maxSoc);
 
-            }
-        });
 
-        SingleOutputStreamOperator<Bms> bmsStream =  timeWindowedBmsStream.process(new ProcessWindowFunction<Bms, Bms, String, TimeWindow>() {
-            @Override
-            public void process(String s, Context context, Iterable<Bms> iterable, Collector<Bms> collector) throws Exception {
-
+                collector.collect(minuteMetric);
             }
         });
 
+        bmsStream.print();
 
-
+        env.execute();
     }
-
-
-    static class MyTrigger extends Trigger<Bms, TimeWindow>{
-
-        @Override
-        public TriggerResult onElement(Bms element, long timestamp, TimeWindow window, TriggerContext ctx) throws Exception {
-            return null;
-        }
-
-        @Override
-        public TriggerResult onProcessingTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
-            return null;
-        }
-
-        @Override
-        public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
-            return null;
-        }
-
-        @Override
-        public void clear(TimeWindow window, TriggerContext ctx) throws Exception {
-
-        }
-    }
-
-
 }

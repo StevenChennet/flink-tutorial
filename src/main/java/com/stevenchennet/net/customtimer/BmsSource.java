@@ -14,19 +14,27 @@ public class BmsSource implements SourceFunction<Bms>, CheckpointedFunction {
 
     @Override
     public void run(SourceContext<Bms> sourceContext) throws Exception {
+        long TAG = 1000L;
         List<Bms> bmsList = Arrays.asList(
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build(),
-                Bms.builder().id("A").uptTime(1).soc(0.1).tMax(100D).tMin(15D).kwhMeter(123D).build()
+                Bms.builder().id("A").uptTime(110 * TAG).soc(0.1).tMax(100D).tMaxCode("A").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(140 * TAG).soc(0.2).tMax(110D).tMaxCode("A").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(170 * TAG).soc(0.3).tMax(120D).tMaxCode("A").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(200 * TAG).soc(0.4).tMax(130D).tMaxCode("B").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(230 * TAG).soc(0.5).tMax(100D).tMaxCode("B").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(260 * TAG).soc(0.6).tMax(100D).tMaxCode("B").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(290 * TAG).soc(0.7).tMax(100D).tMaxCode("C").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(320 * TAG).soc(0.8).tMax(100D).tMaxCode("D").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(350 * TAG).soc(0.9).tMax(100D).tMaxCode("D").kwhMeter(123D).build(),
+                Bms.builder().id("A").uptTime(380 * TAG).soc(0.9).tMax(100D).tMaxCode("D").kwhMeter(123D).build()
         );
-        bmsList.forEach(sourceContext::collect);
+
+        //bmsList.forEach(sourceContext::collect);
+
+        for (Bms bms : bmsList){
+            int b = 10;
+            sourceContext.collect(bms);
+            int a  = 10;
+        }
     }
 
     @Override

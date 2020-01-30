@@ -4,6 +4,7 @@ import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.watermark.Watermark;
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,11 +29,15 @@ public class BmsXSource implements SourceFunction<Bms> {
                 Bms.builder().id("A").uptTime(380 * TAG).soc(1.0).tMax(100D).tMaxCode("D").kwhMeter(123D).build()
         );
 
+
         //bmsList.forEach(sourceContext::collect);
 
-        for (Bms bms : bmsList){
+        for (Bms bms : bmsList) {
+            //sourceContext.emitWatermark(new Watermark(bms.getUptTime() - 1));
+            //sourceContext.collectWithTimestamp(bms, bms.getUptTime());
+
             sourceContext.collect(bms);
-            Thread.sleep(1000);
+            sourceContext.emitWatermark(new Watermark(bms.getUptTime()));
         }
     }
 

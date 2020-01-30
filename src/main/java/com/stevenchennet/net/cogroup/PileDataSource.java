@@ -10,16 +10,16 @@ public class PileDataSource implements SourceFunction<PileData> {
     public void run(SourceContext<PileData> ctx) throws Exception {
         long TAG = 1000;
         List<PileData> pileDataList = Arrays.asList(
-                PileData.builder().id("A").billId("billId").uptTime(110 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(140 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(170 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(200 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(230 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(260 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(290 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(320 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(350 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build(),
-                PileData.builder().id("A").billId("billId").uptTime(380 * TAG).DirectCurrent(30).DirectVoltage(380).DirectPower(10000).build()
+                PileData.builder().id("A").billId("billId").uptTime(110 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(140 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(170 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(200 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(230 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(260 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(290 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(320 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(350 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build(),
+                PileData.builder().id("A").billId("billId").uptTime(380 * TAG).directCurrent(30).directVoltage(380).directPower(10000).build()
         );
 
         for (PileData pileData : pileDataList){

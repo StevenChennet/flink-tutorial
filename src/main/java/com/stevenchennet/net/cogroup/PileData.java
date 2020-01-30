@@ -9,7 +9,7 @@ public class PileData {
     private long uptTime;
     private String id;
     private String billId;
-    private double DirectPower;
-    private double DirectCurrent;
-    private double DirectVoltage;
+    private double directPower;
+    private double directCurrent;
+    private double directVoltage;
 }
